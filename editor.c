@@ -168,7 +168,10 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     u32 currentSoftLine = 0;
 
     //bitmap->width - pagePadding * 2
-    int rectWidth = 500;
+    int rectWidth = input->mouseX - pagePadding;
+    if(rectWidth < 50)
+        rectWidth = 50;
+
     DrawRect(bitmap, pagePadding, pagePadding, rectWidth, 2000, 0xaa2222);
 
     u32 currentSoftlineWidth = 0;
@@ -180,7 +183,7 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
         i8 ch = *((i8 *)txtFile.content + i);
         if (ch == ' ')
         {
-            if (currentSoftlineWidth > rectWidth)
+            if (currentSoftlineWidth >= rectWidth)
             {
                 softLineBreaks[currentSoftLine] = currentWord;
                 currentSoftlineWidth = currentWordWidth;
@@ -197,7 +200,9 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
         }
         else if (ch == '\n')
         {
-            currentSoftlineWidth = 0;
+            softLineBreaks[currentSoftLine] = currentWord;
+            currentSoftlineWidth = currentWordWidth;
+            currentSoftLine++;
             currentWord = i;
             currentWordWidth = 0;
         }

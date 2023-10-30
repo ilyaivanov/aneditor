@@ -98,7 +98,11 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 
     char *text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
     int step = PIXEL_SIZE * CELL_SIZE;
+
+    int startX = 20;
     int x = 20;
+    int y = 20;
+    int lineAdvance = 2;
     while (*text)
     {
         if (*text == ' ')
@@ -112,7 +116,13 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
             int gridY = pos / GRID_WIDTH;
             int gridX = pos % GRID_WIDTH;
 
-            x += (DrawPixelGlyphAt(bitmap, &fontTexture, gridX, gridY, x, 20) + 1) * PIXEL_SIZE;
+            x += (DrawPixelGlyphAt(bitmap, &fontTexture, gridX, gridY, x, y) + 1) * PIXEL_SIZE;
+
+            if (x + CELL_SIZE * PIXEL_SIZE > bitmap->width - startX * 2)
+            {
+                x = startX;
+                y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+            }
         }
 
         text++;

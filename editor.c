@@ -13,6 +13,8 @@
 #define LEFT_PADDING 1
 #define TOP_PADDING 1
 #define CELL_SIZE 7
+#define GLYPH_ERROR_WIDTH 4
+#define SPACE_WIDTH 3
 #define PIXEL_SIZE 2
 #define GRID_WIDTH 16
 
@@ -83,7 +85,7 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
     //Fill NOT FOUND pixels
     for (int y = 0; y < CELL_SIZE; y += 1)
     {
-        for (int x = 0; x < 4; x += 1)
+        for (int x = 0; x < GLYPH_ERROR_WIDTH; x += 1)
         {
             notFoundPixels.points[notFoundPixels.pointCount].x = x;
             notFoundPixels.points[notFoundPixels.pointCount].y = y;
@@ -92,10 +94,33 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
     }
 }
 
+// Need to think how to support UTF-16 or even extended ASCI set
+#define IsGlyphSupported(ch) (ch) < 128
+
+int GetGlyphWidth(u8 ch){
+    
+    int isCharSupported = IsGlyphSupported(ch);
+
+    if (!isCharSupported)
+        return GLYPH_ERROR_WIDTH;
+
+    int codepointIndex = ch - '!' + 1;
+    LetterPixels *pixels = &letters[codepointIndex];
+    int maxX = 0;
+    for (int i = 0; i < pixels->pointCount; i += 1)
+    {
+        int x = pixels->points[i].x;
+        if (x > maxX)
+            maxX = x;
+    }
+
+    return maxX + 1;
+}
+
+//return the width of a glyph in glyph pixels
 int DrawPixelGlyphAt(MyBitmap *bitmap, u8 ch, int posX, int posY)
 {
-    // Need to think how to support UTF-16 or even extended ASCI set
-    int isCharSupported = ch < 128;
+    int isCharSupported = IsGlyphSupported(ch);
 
     int codepointIndex = ch - '!' + 1;
 
@@ -137,45 +162,57 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     // DrawPixelGrid(bitmap);
     int step = PIXEL_SIZE * CELL_SIZE;
     int pagePadding = 20;
+    int maxTextWidth = bitmap->width - pagePadding * 2;
 
-    u32 lines[200] = {0};
-    u32 currentLine = 0;
+    u32 softLineBreaks[200] = {0};
+    u32 currentSoftLine = 0;
 
-    // breaking text into 5-word lines
-    int wordsCount = 0;
+    //bitmap->width - pagePadding * 2
+    int rectWidth = 400;
+    DrawRect(bitmap, pagePadding, pagePadding, rectWidth, 2000, 0xaa2222);
+
+    u32 currentSoftlineWidth = 0;
+
     for (int i = 0; i < txtFile.size; i += 1)
     {
-        u8 ch = *((u8 *)txtFile.content + i);
+        i8 ch = *((i8 *)txtFile.content + i);
         if (ch == ' ')
         {
-            wordsCount++;
-            if (wordsCount > 5)
+            if (currentSoftlineWidth > rectWidth)
             {
-                wordsCount = 0;
-                lines[currentLine] = i;
-                currentLine++;
+                softLineBreaks[currentSoftLine] = i;
+                currentSoftlineWidth = 0;
+                currentSoftLine++;
+            }
+            else
+            {
+                currentSoftlineWidth += SPACE_WIDTH * PIXEL_SIZE;
             }
         }
         else if (ch == '\n')
         {
-            wordsCount = 0;
+            currentSoftlineWidth = 0;
+        }
+        else
+        {
+            currentSoftlineWidth += (GetGlyphWidth(ch) + 1) * PIXEL_SIZE;
         }
     }
 
-    currentLine = 0;
+    u32 currentDrawingLine = 0;
 
-    int x = 20;
-    int y = 20;
+    int x = pagePadding;
+    int y = pagePadding;
     int lineAdvance = 3;
     int paragraphAdvance = 8;
     for(int i = 0; i < txtFile.size; i+=1)
     {
         u8 ch = *((u8 *)txtFile.content + i);
-        if (i == lines[currentLine])
+        if (ch == ' ' && i == softLineBreaks[currentDrawingLine])
         {
             y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
             x = pagePadding;
-            currentLine += 1;
+            currentDrawingLine += 1;
         }
         else if (ch == '\n')
         {
@@ -184,7 +221,7 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
         }
         else if (ch == ' ')
         {
-            x += 3 * PIXEL_SIZE;
+            x += SPACE_WIDTH * PIXEL_SIZE;
         }
         else if (ch == '\r')
         {
@@ -192,14 +229,7 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
         }
         else
         {
-
             x += (DrawPixelGlyphAt(bitmap, ch, x, y) + 1) * PIXEL_SIZE;
-
-            if (x + CELL_SIZE * PIXEL_SIZE > bitmap->width - pagePadding * 2)
-            {
-                x = pagePadding;
-                y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
-            }
         }
     }
 

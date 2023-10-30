@@ -30,7 +30,7 @@ typedef struct
     i32 width;
     i32 height;
     i32 bytesPerPixel;
-    i8 *pixels;
+    u32 *pixels;
 } MyBitmap;
 
 

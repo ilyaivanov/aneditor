@@ -42,7 +42,7 @@ void ParseBmpFile(FileContent *fileInfo, MyBitmap *texture)
 
     texture->width = file->biWidth;
     texture->height = file->biHeight;
-    texture->pixels = ((char *)file + file->bfOffBits);
+    texture->pixels = (u32*)((char *)file + file->bfOffBits);
     texture->bytesPerPixel = 4;
 
     u32 alphaMask = ~(file->rMask | file->gMask | file->bMask);
@@ -52,7 +52,7 @@ void ParseBmpFile(FileContent *fileInfo, MyBitmap *texture)
     u32 greenShift = GetShift(file->gMask);
     u32 blueShift = GetShift(file->bMask);
 
-    u32 *pixel = (u32 *)texture->pixels;
+    u32 *pixel = texture->pixels;
     for (u32 y = 0; y < texture->height; y += 1)
     {
         for (u32 x = 0; x < texture->width; x += 1)
@@ -70,8 +70,8 @@ void ParseBmpFile(FileContent *fileInfo, MyBitmap *texture)
     }
 
     // mirror upside-down texture
-    u32 *topRow = (u32 *)texture->pixels;
-    u32 *bottomRow = (u32 *)texture->pixels + texture->width * (texture->height - 1);
+    u32 *topRow = texture->pixels;
+    u32 *bottomRow = texture->pixels + texture->width * (texture->height - 1);
 
     for (u32 y = 0; y < texture->height / 2; y += 1)
     {

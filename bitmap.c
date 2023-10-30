@@ -1,7 +1,8 @@
 void DrawRect(MyBitmap *bitmap, i32 x, i32 y, i32 width, i32 height, i32 color)
 {
     // converting math y-axis to screen-based y-axis;
-    y = bitmap->height - y - height;
+    // y = bitmap->height - y - height;
+
     if (x + width > bitmap->width)
     {
         width = bitmap->width - x;

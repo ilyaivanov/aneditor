@@ -106,7 +106,10 @@ HWND OpenGameWindow(HINSTANCE instance)
     RegisterClassA(&windowClass);
 
     HWND window = CreateWindowA(windowClass.lpszClassName, "An Editor", EDITOR_WINDOW_STYLE | WS_VISIBLE,
-                                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+                                /* x */ CW_USEDEFAULT,
+                                /* y */ CW_USEDEFAULT,
+                                /* w */ 700,
+                                /* h */ 500,
                                 0, 0, instance, 0);
 
     // i32 requestedWidth = CANVAS_WIDTH;

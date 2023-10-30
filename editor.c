@@ -27,13 +27,15 @@ typedef struct LetterPixels
 } LetterPixels;
 
 LetterPixels letters[LETTERS_SUPPORTED];
-
 LetterPixels notFoundPixels;
+
+FileContent txtFile;
 
 void GameInit(MyBitmap *bitmap, MyFrameInput *input)
 {
     //TODO: memory leak, I will free bitmap once I will convert symbols to C structures
     FileContent file = input->readFile("..\\aseprite_font.bmp");
+    txtFile = input->readFile("..\\sample.txt");
 
     MyBitmap fontTexture;
     ParseBmpFile(&file, &fontTexture);
@@ -132,24 +134,23 @@ float totalTime = 0;
 void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 {
     // DrawPixelGrid(bitmap);
-
-    char *text = "Hello there from the undertale! My monery $500 while me & you pointers * (fo)";
     int step = PIXEL_SIZE * CELL_SIZE;
 
     int startX = 20;
     int x = 20;
     int y = 20;
-    int lineAdvance = 2;
-    while (*text)
+    int lineAdvance = 3;
+    int paragraphAdvance = 8;
+    for(int i = 0; i < txtFile.size; i+=1)
     {
-        u8 ch = *text;
+        u8 ch = *((u8 *)txtFile.content + i);
         if (ch == ' ')
         {
             x += 3 * PIXEL_SIZE;
         }
         else if (ch == '\n')
         {
-            y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+            y += (CELL_SIZE + 10) * PIXEL_SIZE;
             x = startX;
         }
         else if (ch == '\r')
@@ -167,8 +168,6 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
                 y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
             }
         }
-        
-        text++;
     }
 
     totalTime += deltaMs;

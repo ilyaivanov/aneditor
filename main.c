@@ -108,7 +108,7 @@ HWND OpenGameWindow(HINSTANCE instance)
     int screenWidth = GetDeviceCaps(dc, HORZRES);
 
     int windowWidth = 700;
-    int windowHeight = 700;
+    int windowHeight = 900;
     HWND window = CreateWindowA(windowClass.lpszClassName, "An Editor", EDITOR_WINDOW_STYLE | WS_VISIBLE,
                                 /* x */ screenWidth - windowWidth - 25,
                                 /* y */ 25,

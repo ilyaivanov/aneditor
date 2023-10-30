@@ -136,8 +136,34 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 {
     // DrawPixelGrid(bitmap);
     int step = PIXEL_SIZE * CELL_SIZE;
+    int pagePadding = 20;
 
-    int startX = 20;
+    u32 lines[200] = {0};
+    u32 currentLine = 0;
+
+    // breaking text into 5-word lines
+    int wordsCount = 0;
+    for (int i = 0; i < txtFile.size; i += 1)
+    {
+        u8 ch = *((u8 *)txtFile.content + i);
+        if (ch == ' ')
+        {
+            wordsCount++;
+            if (wordsCount > 5)
+            {
+                wordsCount = 0;
+                lines[currentLine] = i;
+                currentLine++;
+            }
+        }
+        else if (ch == '\n')
+        {
+            wordsCount = 0;
+        }
+    }
+
+    currentLine = 0;
+
     int x = 20;
     int y = 20;
     int lineAdvance = 3;
@@ -145,14 +171,20 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     for(int i = 0; i < txtFile.size; i+=1)
     {
         u8 ch = *((u8 *)txtFile.content + i);
-        if (ch == ' ')
+        if (i == lines[currentLine])
         {
-            x += 3 * PIXEL_SIZE;
+            y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+            x = pagePadding;
+            currentLine += 1;
         }
         else if (ch == '\n')
         {
-            y += (CELL_SIZE + 10) * PIXEL_SIZE;
-            x = startX;
+            y += (CELL_SIZE + paragraphAdvance) * PIXEL_SIZE;
+            x = pagePadding;
+        }
+        else if (ch == ' ')
+        {
+            x += 3 * PIXEL_SIZE;
         }
         else if (ch == '\r')
         {
@@ -163,9 +195,9 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 
             x += (DrawPixelGlyphAt(bitmap, ch, x, y) + 1) * PIXEL_SIZE;
 
-            if (x + CELL_SIZE * PIXEL_SIZE > bitmap->width - startX * 2)
+            if (x + CELL_SIZE * PIXEL_SIZE > bitmap->width - pagePadding * 2)
             {
-                x = startX;
+                x = pagePadding;
                 y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
             }
         }

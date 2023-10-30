@@ -33,7 +33,6 @@ FileContent txtFile;
 
 void GameInit(MyBitmap *bitmap, MyFrameInput *input)
 {
-    //TODO: memory leak, I will free bitmap once I will convert symbols to C structures
     FileContent file = input->readFile("..\\aseprite_font.bmp");
     txtFile = input->readFile("..\\sample.txt");
 
@@ -54,7 +53,7 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
         for (int y = 0; y < CELL_SIZE; y += 1)
         {
             u32 *sourcePixel = sourceRow;
-            // need to have ability to go outside of the CELL_SIZE bounds
+            // need to have ability to go outside of the CELL_SIZE bounds, currently @ symbol is not properly drawn (it is widen than CELL_SIZE)
             for (int x = 0; x < CELL_SIZE; x += 1)
             {
                 u32 texturePixel = *sourcePixel;
@@ -78,6 +77,8 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
             sourceRow += fontTexture.width;
         }
     }
+
+    input->freeMemory(file.content);
 
     //Fill NOT FOUND pixels
     for (int y = 0; y < CELL_SIZE; y += 1)

@@ -91,7 +91,8 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
     return DefWindowProc(window, message, wParam, lParam);
 }
-#define EDITOR_WINDOW_STYLE (WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME)
+// #define EDITOR_WINDOW_STYLE (WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME)
+#define EDITOR_WINDOW_STYLE (WS_OVERLAPPEDWINDOW)
 
 HWND OpenGameWindow(HINSTANCE instance)
 {

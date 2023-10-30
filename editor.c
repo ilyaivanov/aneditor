@@ -167,12 +167,11 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     u32 softLineBreaks[200] = {0};
     u32 currentSoftLine = 0;
 
-    //bitmap->width - pagePadding * 2
-    int rectWidth = input->mouseX - pagePadding;
-    if(rectWidth < 50)
-        rectWidth = 50;
+    // int rectWidth = input->mouseX - pagePadding;
+    // if(rectWidth < 150)
+    //  rectWidth = 310;
 
-    DrawRect(bitmap, pagePadding, pagePadding, rectWidth, 2000, 0xaa2222);
+    // DrawRect(bitmap, pagePadding, pagePadding, rectWidth, 2000, 0x335533);
 
     u32 currentSoftlineWidth = 0;
     i32 currentWord = 0;
@@ -183,10 +182,11 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
         i8 ch = *((i8 *)txtFile.content + i);
         if (ch == ' ')
         {
-            if (currentSoftlineWidth >= rectWidth)
+            if (currentSoftlineWidth >= maxTextWidth)
             {
                 softLineBreaks[currentSoftLine] = currentWord;
-                currentSoftlineWidth = currentWordWidth;
+                // I don't know why I need - 1 here. Visually new lines may go one logical pixel over the board
+                currentSoftlineWidth = currentWordWidth + (SPACE_WIDTH - 1) * PIXEL_SIZE;
                 currentSoftLine++;
                 currentWord = i;
                 currentWordWidth = 0;
@@ -198,11 +198,21 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
                 currentSoftlineWidth += SPACE_WIDTH * PIXEL_SIZE;
             }
         }
-        else if (ch == '\n')
+        else if (ch == '\n' || i == txtFile.size - 1)
         {
-            softLineBreaks[currentSoftLine] = currentWord;
-            currentSoftlineWidth = currentWordWidth;
+            if (currentSoftlineWidth >= maxTextWidth)
+            {
+                softLineBreaks[currentSoftLine] = currentWord;
+                currentSoftlineWidth = currentSoftlineWidth;
+            }
+            else
+            {
+                softLineBreaks[currentSoftLine] = i;
+                currentSoftlineWidth = 0;
+            }
+
             currentSoftLine++;
+            
             currentWord = i;
             currentWordWidth = 0;
         }
@@ -223,15 +233,17 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     for(int i = 0; i < txtFile.size; i+=1)
     {
         u8 ch = *((u8 *)txtFile.content + i);
-        if (ch == ' ' && i == softLineBreaks[currentDrawingLine])
+        if (i == softLineBreaks[currentDrawingLine])
         {
-            y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
-            x = pagePadding;
+            if (ch == '\n')
+            {
+                y += (CELL_SIZE + paragraphAdvance) * PIXEL_SIZE;
+            }
+            else
+            {
+                y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+            }
             currentDrawingLine += 1;
-        }
-        else if (ch == '\n')
-        {
-            y += (CELL_SIZE + paragraphAdvance) * PIXEL_SIZE;
             x = pagePadding;
         }
         else if (ch == ' ')

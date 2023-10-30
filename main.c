@@ -5,9 +5,11 @@
 
 BITMAPINFO bitmapInfo = {0};
 MyBitmap bitmap = {0};
+MyFrameInput frameInput = {0};
 
 i32 isRunning = 1;
 
+#define DESIRED_MS_PER_FRAME (1000.0f / 60.0f)
 
 FileContent ReadMyFileImp(char* path){
 
@@ -80,6 +82,11 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     else if (message == WM_SIZE)
     {
         OnResize(window);
+
+        memset(bitmap.pixels, BACKGROUND_COLOR_GREY, bitmap.height * bitmap.width * bitmap.bytesPerPixel);
+        GameUpdateAndRender(&bitmap, &frameInput, DESIRED_MS_PER_FRAME);
+        
+        InvalidateRect(window, 0, 1);
     }
     else if (message == WM_PAINT)
     {
@@ -197,7 +204,6 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
 
     HWND window = OpenGameWindow(instance);
 
-    MyFrameInput frameInput = {0};
 
     frameInput.readFile = ReadMyFileImp;
     frameInput.freeMemory = FreeMyMemmoryImp;
@@ -207,8 +213,6 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
     MSG msg;
 
     timeBeginPeriod(1);
-
-    float desiredMsPerFrame = 1000.0f / 60.0f;
 
     i64 frequency = GetPerfFrequency();
     i64 startTime = GetPerfCounter();
@@ -263,14 +267,16 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
         memset(bitmap.pixels, BACKGROUND_COLOR_GREY, bitmap.height * bitmap.width * bitmap.bytesPerPixel);
 
         // render pixels on the bitmap
-        GameUpdateAndRender(&bitmap, &frameInput, desiredMsPerFrame);
+        GameUpdateAndRender(&bitmap, &frameInput, DESIRED_MS_PER_FRAME);
         
+        OutputDebugStringA("frame\n");
+
         // render pixels on the screen
         DrawBitmap(dc);
 
         float logicTime = (GetPerfCounter() - startTime) * 1000.0f / frequency;
         
-        i32 timeToSleep = (i32)(desiredMsPerFrame - logicTime) - 1;
+        i32 timeToSleep = (i32)(DESIRED_MS_PER_FRAME - logicTime) - 1;
 
         if(timeToSleep > 0)
         {
@@ -279,13 +285,13 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
 
         i64 loopStartedAt = GetPerfCounter();
         i64 time = loopStartedAt;
-        while((time - startTime) * 1000.0f / frequency < desiredMsPerFrame){
+        while((time - startTime) * 1000.0f / frequency < DESIRED_MS_PER_FRAME){
             time = GetPerfCounter();
         }
 
         i64 endTime = time;
         float frameMs = (endTime - startTime) * 1000.0f / (float)frequency;
-        if(frameMs > desiredMsPerFrame + 0.001f){
+        if(frameMs > DESIRED_MS_PER_FRAME + 0.001f){
             char perfMessageBuffer[255];
             sprintf_s(perfMessageBuffer, sizeof(perfMessageBuffer), 
                   "Lost frame: %05.5fms\n", frameMs);

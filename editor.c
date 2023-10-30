@@ -12,7 +12,7 @@ MyBitmap fontTexture;
 #define LEFT_PADDING 1
 #define TOP_PADDING 1
 #define CELL_SIZE 7
-#define PIXEL_SIZE 3
+#define PIXEL_SIZE 2
 #define GRID_WIDTH 16
 
 void GameInit(MyBitmap *bitmap, MyFrameInput *input)
@@ -84,6 +84,7 @@ float totalTime = 0;
 
 void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 {
+#if 0
     // drawing grid for proper text measurements
     int widthInCells = bitmap->width / PIXEL_SIZE + 1;
     int heightInCells = bitmap->height / PIXEL_SIZE + 1;
@@ -95,6 +96,7 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
             DrawRect(bitmap, x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, color);
         }
     }
+#endif
 
     char *text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
     int step = PIXEL_SIZE * CELL_SIZE;

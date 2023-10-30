@@ -3,8 +3,6 @@
 #define ArrayLength(array) (sizeof(array) / sizeof(array[0]))
 #define MyAssert(cond) if (!(cond)) { *(u32*)0 = 0; }
 
-
-
 #define i8 int8_t
 #define i16 int16_t
 #define i32 int32_t

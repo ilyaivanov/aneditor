@@ -91,6 +91,7 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
     return DefWindowProc(window, message, wParam, lParam);
 }
+#define EDITOR_WINDOW_STYLE (WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME)
 
 HWND OpenGameWindow(HINSTANCE instance)
 {
@@ -104,7 +105,7 @@ HWND OpenGameWindow(HINSTANCE instance)
 
     RegisterClassA(&windowClass);
 
-    HWND window = CreateWindowA(windowClass.lpszClassName, "An Editor", (WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME) | WS_VISIBLE,
+    HWND window = CreateWindowA(windowClass.lpszClassName, "An Editor", EDITOR_WINDOW_STYLE | WS_VISIBLE,
                                 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                 0, 0, instance, 0);
 
@@ -155,14 +156,14 @@ WINDOWPLACEMENT prevWindowDimensions = {sizeof(prevWindowDimensions)};
 void ToggleFullscreen(HWND window)
 {
     DWORD style = GetWindowLong(window, GWL_STYLE);
-    if (style & WS_OVERLAPPEDWINDOW)
+    if (style & EDITOR_WINDOW_STYLE)
     {
         isFullscreen = 1;
         MONITORINFO monitorInfo = {sizeof(monitorInfo)};
         if (GetWindowPlacement(window, &prevWindowDimensions) &&
             GetMonitorInfo(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitorInfo))
         {
-            SetWindowLong(window, GWL_STYLE, style & ~WS_OVERLAPPEDWINDOW);
+            SetWindowLong(window, GWL_STYLE, style & ~EDITOR_WINDOW_STYLE);
 
             SetWindowPos(window, HWND_TOP,
                          monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
@@ -174,7 +175,7 @@ void ToggleFullscreen(HWND window)
     else
     {
         isFullscreen = 0;
-        SetWindowLong(window, GWL_STYLE, style | WS_OVERLAPPEDWINDOW);
+        SetWindowLong(window, GWL_STYLE, style | EDITOR_WINDOW_STYLE);
         SetWindowPlacement(window, &prevWindowDimensions);
         SetWindowPos(window, NULL, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);

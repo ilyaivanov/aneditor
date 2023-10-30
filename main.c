@@ -95,21 +95,25 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 HWND OpenGameWindow(HINSTANCE instance)
 {
-    WNDCLASS windowClass = {0};
-
-    windowClass.hInstance = instance;
-    windowClass.lpfnWndProc = OnEvent;
-    windowClass.lpszClassName = "MyWindow";
-    windowClass.style = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
-    windowClass.hCursor = LoadCursor(0, IDC_ARROW);
-
+    WNDCLASS windowClass = {
+        .hInstance = instance,
+        .lpfnWndProc = OnEvent,
+        .lpszClassName = "MyWindow",
+        .style = CS_VREDRAW | CS_HREDRAW | CS_OWNDC,
+        .hCursor = LoadCursor(0, IDC_ARROW),
+    };
     RegisterClassA(&windowClass);
 
+    HDC dc = GetDC(0);
+    int screenWidth = GetDeviceCaps(dc, HORZRES);
+
+    int windowWidth = 700;
+    int windowHeight = 700;
     HWND window = CreateWindowA(windowClass.lpszClassName, "An Editor", EDITOR_WINDOW_STYLE | WS_VISIBLE,
-                                /* x */ CW_USEDEFAULT,
-                                /* y */ CW_USEDEFAULT,
-                                /* w */ 700,
-                                /* h */ 500,
+                                /* x */ screenWidth - windowWidth - 25,
+                                /* y */ 25,
+                                /* w */ windowWidth,
+                                /* h */ windowHeight,
                                 0, 0, instance, 0);
 
     // i32 requestedWidth = CANVAS_WIDTH;

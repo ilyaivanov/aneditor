@@ -6,6 +6,7 @@
 #include "bitmap.c"
 
 #define BACKGROUND_COLOR_GREY 0x22
+#define FOREGROUND_COLOR 0xFFFFFF
 
 MyBitmap fontTexture;
 #define CELL_PADDING 4
@@ -15,10 +16,14 @@ MyBitmap fontTexture;
 #define PIXEL_SIZE 2
 #define GRID_WIDTH 16
 
+
+FileContent thisFile;
 void GameInit(MyBitmap *bitmap, MyFrameInput *input)
 {
     FileContent file = input->readFile("..\\aseprite_font.bmp");
     ParseBmpFile(&file, &fontTexture);
+
+    thisFile = input->readFile("..\\editor.c");
 }
 
 int DrawPixelGlyphAt(MyBitmap *bitmap, MyBitmap *tex, int gridX, int gridY, int posX, int posY)
@@ -40,9 +45,10 @@ int DrawPixelGlyphAt(MyBitmap *bitmap, MyBitmap *tex, int gridX, int gridY, int 
             u32 g = texturePixel & 0xff;
             if (alpha > 0 && g == 0)
             {
-                DrawRect(bitmap, posX + x * PIXEL_SIZE, posY + y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, 0xffffff);
+                DrawRect(bitmap, posX + x * PIXEL_SIZE, posY + y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, FOREGROUND_COLOR);
 
-                if(x > maxX) maxX = x;
+                if (x > maxX)
+                    maxX = x;
             }
 
             sourcePixel++;
@@ -98,27 +104,52 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     }
 #endif
 
-    char *text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+    char *text = "Line 1\nLine 2\nYet another line";
     int step = PIXEL_SIZE * CELL_SIZE;
 
     int startX = 20;
     int x = 20;
     int y = 20;
     int lineAdvance = 2;
-    while (*text)
+    for (int i = 0; i < thisFile.size; i += 1)
     {
-        if (*text == ' ')
+        u8 ch = *((u8 *)thisFile.content + i);
+        if (ch == ' ')
         {
             x += 3 * PIXEL_SIZE;
         }
-        else
+        else if (ch == '\n')
+        {
+            y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+            x = startX;
+        }
+        else if (ch == '\r')
+        {
+            // skip windows carrage returns
+        }
+        else if (ch >= '!' && ch <= 'ґ')
         {
 
-            int pos = *text - '!' + 1;
+            int pos = ch - '!' + 1;
             int gridY = pos / GRID_WIDTH;
             int gridX = pos % GRID_WIDTH;
 
             x += (DrawPixelGlyphAt(bitmap, &fontTexture, gridX, gridY, x, y) + 1) * PIXEL_SIZE;
+
+            if (x + CELL_SIZE * PIXEL_SIZE > bitmap->width - startX * 2)
+            {
+                x = startX;
+                y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+            }
+        }
+        else 
+        {
+            int pos = ch - '!' + 1;
+            int gridY = pos / GRID_WIDTH;
+            int gridX = pos % GRID_WIDTH;
+
+            DrawRect(bitmap, x, y, 4 * PIXEL_SIZE, CELL_SIZE * PIXEL_SIZE, 0xff2222);
+            x += (4 + 1) * PIXEL_SIZE;
 
             if (x + CELL_SIZE * PIXEL_SIZE > bitmap->width - startX * 2)
             {

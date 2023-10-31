@@ -5,8 +5,10 @@
 #include "bmp.c"
 #include "bitmap.c"
 
-#define BACKGROUND_COLOR_GREY 0x22
+#define SHOW_GRID 0
+#define BACKGROUND_COLOR_GREY 0x11
 #define FOREGROUND_COLOR 0xFFFFFF
+#define CURSOR_COLOR 0xFF2222
 #define FOREGROUND_COLOR_ERROR 0xFF2222
 
 #define CELL_PADDING 4
@@ -125,7 +127,7 @@ int DrawPixelGlyphAt(MyBitmap *bitmap, u8 ch, int posX, int posY)
     int codepointIndex = ch - '!' + 1;
 
     LetterPixels *pixels = isCharSupported ? &letters[codepointIndex] : &notFoundPixels;
-    u32 color = isCharSupported  ? FOREGROUND_COLOR : FOREGROUND_COLOR_ERROR;
+    u32 color = isCharSupported ? FOREGROUND_COLOR : FOREGROUND_COLOR_ERROR;
 
     int maxX = 0;
 
@@ -157,26 +159,33 @@ void DrawPixelGrid(MyBitmap *bitmap)
 }
 
 float totalTime = 0;
+int highlightAt = 3;
+
 void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 {
-    // DrawPixelGrid(bitmap);
+#if SHOW_GRID
+    DrawPixelGrid(bitmap);
+#endif
+
+    if (input->leftPressedThisFrame && highlightAt > 0)
+        highlightAt--;
+    if (input->rightPressedThisFrame && highlightAt < txtFile.size - 1)
+        highlightAt++;
+
+
     int step = PIXEL_SIZE * CELL_SIZE;
     int pagePadding = 20;
     int maxTextWidth = bitmap->width - pagePadding * 2;
 
-    u32 softLineBreaks[200] = {0};
+    u32 softLineBreaks[200] = {-1};
     u32 currentSoftLine = 0;
-
-    // int rectWidth = input->mouseX - pagePadding;
-    // if(rectWidth < 150)
-    //  rectWidth = 310;
-
-    // DrawRect(bitmap, pagePadding, pagePadding, rectWidth, 2000, 0x335533);
 
     u32 currentSoftlineWidth = 0;
     i32 currentWord = 0;
     i32 currentWordWidth = 0;
 
+
+    //extract this on one time events
     for (int i = 0; i < txtFile.size; i += 1)
     {
         i8 ch = *((i8 *)txtFile.content + i);
@@ -230,8 +239,17 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
     int y = pagePadding;
     int lineAdvance = 3;
     int paragraphAdvance = 8;
-    for(int i = 0; i < txtFile.size; i+=1)
+
+    int logicalPixelsBetweenLetters = 1;
+
+    for(int i = 0; i < txtFile.size; i += 1)
     {
+        if (i == highlightAt)
+        {
+            int width = logicalPixelsBetweenLetters * PIXEL_SIZE;
+            DrawRect(bitmap, x - width, y, width, CELL_SIZE * PIXEL_SIZE, CURSOR_COLOR);
+        }
+
         u8 ch = *((u8 *)txtFile.content + i);
         if (i == softLineBreaks[currentDrawingLine])
         {
@@ -256,7 +274,7 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
         }
         else
         {
-            x += (DrawPixelGlyphAt(bitmap, ch, x, y) + 1) * PIXEL_SIZE;
+            x += (DrawPixelGlyphAt(bitmap, ch, x, y) + logicalPixelsBetweenLetters) * PIXEL_SIZE;
         }
     }
 

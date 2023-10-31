@@ -31,14 +31,18 @@ typedef struct
     u32 *pixels;
 } MyBitmap;
 
-
-
 typedef struct
 {
     i32 mouseX;
     i32 mouseY;
     u32 wPressed;
     u32 sPressed;
+
+    u32 leftPressedThisFrame;
+    u32 rightPressedThisFrame;
+    u32 downPressedThisFrame;
+    u32 upPressedThisFrame;
+
 
     i32 isClickedInFrame;
     i32 isMouseDown;

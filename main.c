@@ -227,6 +227,11 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
         // memset(&frameInput, 0, sizeof(frameInput));
 
         frameInput.isClickedInFrame = 0;
+        frameInput.leftPressedThisFrame = 0;
+        frameInput.rightPressedThisFrame = 0;
+        frameInput.upPressedThisFrame = 0;
+        frameInput.downPressedThisFrame = 0;
+
 
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
         {
@@ -234,6 +239,10 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
             if (msg.message == WM_KEYDOWN){
                 if(msg.wParam == 'W') frameInput.wPressed = 1;
                 if(msg.wParam == 'S') frameInput.sPressed = 1;
+                if(msg.wParam == VK_RIGHT) frameInput.rightPressedThisFrame = 1;
+                if(msg.wParam == VK_LEFT)  frameInput.leftPressedThisFrame = 1;
+                if(msg.wParam == VK_UP) frameInput.upPressedThisFrame = 1;
+                if(msg.wParam == VK_DOWN)  frameInput.downPressedThisFrame = 1;
             }
 
             if (msg.message == WM_KEYUP){

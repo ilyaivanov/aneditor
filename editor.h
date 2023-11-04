@@ -1,3 +1,6 @@
+#ifndef EDITOR_H
+#define EDITOR_H
+
 #include <stdint.h>
 
 #define ArrayLength(array) (sizeof(array) / sizeof(array[0]))
@@ -12,7 +15,6 @@
 #define u16 uint16_t
 #define u32 uint32_t
 #define u64 uint64_t
-
 
 typedef struct
 {
@@ -50,3 +52,5 @@ typedef struct
     ReadMyFile* readFile;
     FreeMyMemmory* freeMemory;
 } MyFrameInput;
+
+#endif

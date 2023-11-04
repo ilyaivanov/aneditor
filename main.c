@@ -1,5 +1,6 @@
 #include <windows.h>
-#include "editor.c"
+#include "font\gdiFont.c"
+#include "editor2.c"
 
 // #define LOG_TIME 1
 
@@ -8,6 +9,9 @@ MyBitmap bitmap = {0};
 MyFrameInput frameInput = {0};
 
 i32 isRunning = 1;
+
+// used to avoid initial resize event calling UpdateAndRender
+i32 hasInitialized = 0;
 
 #define DESIRED_MS_PER_FRAME (1000.0f / 60.0f)
 
@@ -83,10 +87,13 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
         OnResize(window);
 
-        memset(bitmap.pixels, BACKGROUND_COLOR_GREY, bitmap.height * bitmap.width * bitmap.bytesPerPixel);
-        GameUpdateAndRender(&bitmap, &frameInput, DESIRED_MS_PER_FRAME);
-        
-        InvalidateRect(window, 0, 1);
+        if (hasInitialized)
+        {
+            memset(bitmap.pixels, BACKGROUND_COLOR_GREY, bitmap.height * bitmap.width * bitmap.bytesPerPixel);
+            GameUpdateAndRender(&bitmap, &frameInput, DESIRED_MS_PER_FRAME);
+
+            InvalidateRect(window, 0, 1);
+        }
     }
     else if (message == WM_PAINT)
     {
@@ -198,9 +205,29 @@ void ToggleFullscreen(HWND window)
 }
 
 
+typedef BOOL WINAPI set_process_dpi_aware(void);
+typedef BOOL WINAPI set_process_dpi_awareness_context(DPI_AWARENESS_CONTEXT);
+static void PreventWindowsDPIScaling()
+{
+    HMODULE WinUser = LoadLibraryW(L"user32.dll");
+    set_process_dpi_awareness_context *SetProcessDPIAwarenessContext = (set_process_dpi_awareness_context *)GetProcAddress(WinUser, "SetProcessDPIAwarenessContext");
+    if(SetProcessDPIAwarenessContext)
+    {
+        SetProcessDPIAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+    }
+    else
+    {
+        set_process_dpi_aware *SetProcessDPIAware = (set_process_dpi_aware *)GetProcAddress(WinUser, "SetProcessDPIAware");
+        if(SetProcessDPIAware)
+        {
+            SetProcessDPIAware();
+        }
+    }
+}
 
 int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
 {
+    PreventWindowsDPIScaling();
 
     HWND window = OpenGameWindow(instance);
 
@@ -221,6 +248,7 @@ int wWinMain(HINSTANCE instance, HINSTANCE prev, PWSTR cmdLine, int showCode)
 #endif
 
     GameInit(&bitmap, &frameInput);
+    hasInitialized = 1;
 
     while (isRunning)
     {

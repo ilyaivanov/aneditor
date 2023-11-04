@@ -4,8 +4,13 @@
 
 // char *fontPath = "c:/windows/fonts/cour.ttf";
 char *fontPath = "c:/windows/fonts/segoeui.ttf";
+// char *fontPath = "c:/windows/fonts/lucon.ttf";
+
 // char *fontName = "Courier New";
 char *fontName = "Segoe UI";
+
+//monospaced
+// char *fontName = "Lucida Console";
 
 MyBitmap textures[256];
 

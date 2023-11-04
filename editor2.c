@@ -32,7 +32,7 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
 {
     file = input->readFile("..\\sample.txt");
     MyAssert(file.size > 0);
-    InitFontSystem(11);
+    InitFontSystem(12); // corresponds to browser 16px on my machine. Need to investigate why (probably hardcoded 72 DPI in the code at gdiFont.c)
 
     int totalWidth = bitmap->width;
 

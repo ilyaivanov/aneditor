@@ -107,5 +107,5 @@ u8 GetGlyphWidth(char codepoint)
 
 int GetFontHeight()
 {
-    return textMetric.tmHeight;
+    return textMetric.tmHeight + textMetric.tmExternalLeading;
 }

@@ -23,18 +23,19 @@
 
 #define LETTERS_SUPPORTED 256
 
-char text[] = "A pointer is a variable that contains the address of a variable. Pointers are much used in C, partly because they are sometimes the only way to express a computation, and partly because they usually lead to more compact and efficient code than can be obtained in other ways. Pointers and arrays are closely related; this chapter also explores this relationship and shows how to exploit it.";
-int lines[20];
+int lines[256];
 
 #define SCREEN_PADDING 20
 
+FileContent file;
 void GameInit(MyBitmap *bitmap, MyFrameInput *input)
 {
+    file = input->readFile("..\\sample.txt");
+    MyAssert(file.size > 0);
     InitFontSystem(11);
 
     int totalWidth = bitmap->width;
 
-    char *letter = &text[0];
 
     int currentLine = -1;
     int maxWidth = bitmap->width - SCREEN_PADDING * 2;
@@ -42,18 +43,26 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
     int wordFirstLetterIndex = 0;
     int wordLength = 0;
 
-    for (int i = 0; i < ArrayLength(text) - 1; i += 1)
+    char *letter = (u8 *)file.content;
+    for (int i = 0; i < file.size; i += 1)
     {
-        i8 ch = *letter;
+        i8 ch = *letter;;
         
-        if (ch == ' ' && runningWidth >= maxWidth)
+        if ((ch == ' ' || ch == '\n') && runningWidth >= maxWidth)
         {
             lines[++currentLine] = wordFirstLetterIndex - 1;        
             runningWidth = wordLength;
             wordFirstLetterIndex = i + 1;
             wordLength = 0;
         }
-        else
+        else if (ch == '\n')
+        {
+            lines[++currentLine] = i;
+            runningWidth = 0;
+            wordFirstLetterIndex = i + 1;
+            wordLength = 0;
+        }
+        else if (ch != '\r')
         {
             int w = GetGlyphWidth(ch);
             if (ch == ' ')
@@ -77,19 +86,20 @@ void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 {
     int x = SCREEN_PADDING;
     int y = SCREEN_PADDING;
-    char* ch = text;
     int line = 0;
     int lineHeight = GetFontHeight();
+    int paragraphHeight = GetFontHeight() * 1.4;
 
-    for(int i = 0; i < ArrayLength(text) - 1; i += 1)
+    char *ch = (u8 *)file.content;
+    for(int i = 0; i < file.size; i += 1)
     {
         if (lines[line] == i)
         {
-            y += lineHeight;
+            y += *ch == '\n' ? paragraphHeight : lineHeight;
             x = SCREEN_PADDING;
             line += 1;
         }
-        else
+        else if (*ch != '\r')
         {
             char codepoint = *ch;
             MyBitmap *glyphBitmap = GetGlyphBitmap(codepoint);

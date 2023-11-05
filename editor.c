@@ -1,282 +1,186 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "editor.h"
+#include "font/font.h"
 #include "math.c"
 #include "bmp.c"
 #include "bitmap.c"
 
-#define SHOW_GRID 0
 #define BACKGROUND_COLOR_GREY 0x11
-#define FOREGROUND_COLOR 0xFFFFFF
-#define CURSOR_COLOR 0xFF2222
-#define FOREGROUND_COLOR_ERROR 0xFF2222
+#define SCREEN_PADDING 20
+#define MAX_LINES 256
 
-#define CELL_PADDING 4
-#define LEFT_PADDING 1
-#define TOP_PADDING 1
-#define CELL_SIZE 7
-#define GLYPH_ERROR_WIDTH 4
-#define SPACE_WIDTH 3
-#define PIXEL_SIZE 2
-#define GRID_WIDTH 16
+int lines[MAX_LINES] = {[0] = -1};
+int position = 0;
 
-#define LETTERS_SUPPORTED 256
-
-typedef struct LetterPixels
+inline u32 GetCurrentPositionLineIndex()
 {
-    u32 pointCount;
-    
-    // 22 is picked by hand based on the bitmap 
-    V2i8 points[22];
-} LetterPixels;
+    int currentLineIndex = 0;
+    if (position > lines[0])
+    {
+        for (int i = 0; i < ArrayLength(lines) - 1; i += 1)
+        {
+            if (lines[i] <= position && (lines[i + 1] > position || lines[i + 1] == 0))
+            {
+                currentLineIndex = i;
+                break;
+            }
+        }
+    }
+    return currentLineIndex;
+}
 
-LetterPixels letters[LETTERS_SUPPORTED];
-LetterPixels notFoundPixels;
 
-FileContent txtFile;
-
+FileContent file;
 void GameInit(MyBitmap *bitmap, MyFrameInput *input)
 {
-    FileContent file = input->readFile("..\\aseprite_font.bmp");
-    txtFile = input->readFile("..\\sample.txt");
+    file = input->readFile("..\\sample.txt");
+    // file = input->readFile("..\\small.txt");
+    MyAssert(file.size > 0);
+    InitFontSystem(12); // 12 corresponds for Segoe UI to browser 16px on my machine. Need to investigate why (probably hardcoded 72 DPI in the code at gdiFont.c)
 
-    MyBitmap fontTexture;
-    ParseBmpFile(&file, &fontTexture);
+    int totalWidth = bitmap->width;
 
-    for (int i = 0; i < LETTERS_SUPPORTED; i += 1)
+
+    int currentLine = 0;
+    int maxWidth = bitmap->width - SCREEN_PADDING * 2;
+    int runningWidth = 0;
+    int wordFirstLetterIndex = 0;
+    int wordLength = 0;
+
+    char *letter = (u8 *)file.content;
+
+    //767
+    for (int i = 0; i < file.size; i += 1)
     {
-        int gridY = i / GRID_WIDTH;
-        int gridX = i % GRID_WIDTH;
-
-        LetterPixels *pixels = &letters[i];
-        u32 *sourceRow = (u32 *)fontTexture.pixels +
-                         TOP_PADDING * fontTexture.width +
-                         gridY * fontTexture.width * (CELL_PADDING + CELL_SIZE) +
-                         LEFT_PADDING + gridX * (CELL_PADDING + CELL_SIZE);
-
-        for (int y = 0; y < CELL_SIZE; y += 1)
+        i8 ch = *letter;
+        
+        if ((ch == ' ' || ch == '\n') && runningWidth >= maxWidth)
         {
-            u32 *sourcePixel = sourceRow;
-            // need to have ability to go outside of the CELL_SIZE bounds, currently @ symbol is not properly drawn (it is widen than CELL_SIZE)
-            for (int x = 0; x < CELL_SIZE; x += 1)
-            {
-                u32 texturePixel = *sourcePixel;
-                u32 alpha = texturePixel & 0xff << 24;
-                u32 g = texturePixel & 0xff;
-                if (alpha > 0 && g == 0)
-                {
-                    MyAssert(pixels->pointCount < ArrayLength(pixels->points));
+            lines[++currentLine] = wordFirstLetterIndex - 1;        
+            runningWidth = wordLength;
+            wordFirstLetterIndex = i + 1;
+            wordLength = 0;
 
-                    u32 pointCount = pixels->pointCount;
-                    pixels->points[pointCount].x = x;
-                    pixels->points[pointCount].y = y;
-                    pixels->pointCount += 1;
-
-                    // DrawRect(bitmap, posX + x * PIXEL_SIZE, posY + y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, FOREGROUND_COLOR);
-                }
-
-                sourcePixel++;
-            }
-
-            sourceRow += fontTexture.width;
-        }
-    }
-
-    input->freeMemory(file.content);
-
-    //Fill NOT FOUND pixels
-    for (int y = 0; y < CELL_SIZE; y += 1)
-    {
-        for (int x = 0; x < GLYPH_ERROR_WIDTH; x += 1)
-        {
-            notFoundPixels.points[notFoundPixels.pointCount].x = x;
-            notFoundPixels.points[notFoundPixels.pointCount].y = y;
-            notFoundPixels.pointCount += 1;
-        }
-    }
-}
-
-// Need to think how to support UTF-16 or even extended ASCI set
-#define IsGlyphSupported(ch) (ch) < 128
-
-int GetGlyphWidth(u8 ch){
-    
-    int isCharSupported = IsGlyphSupported(ch);
-
-    if (!isCharSupported)
-        return GLYPH_ERROR_WIDTH;
-
-    int codepointIndex = ch - '!' + 1;
-    LetterPixels *pixels = &letters[codepointIndex];
-    int maxX = 0;
-    for (int i = 0; i < pixels->pointCount; i += 1)
-    {
-        int x = pixels->points[i].x;
-        if (x > maxX)
-            maxX = x;
-    }
-
-    return maxX + 1;
-}
-
-//return the width of a glyph in glyph pixels
-int DrawPixelGlyphAt(MyBitmap *bitmap, u8 ch, int posX, int posY)
-{
-    int isCharSupported = IsGlyphSupported(ch);
-
-    int codepointIndex = ch - '!' + 1;
-
-    LetterPixels *pixels = isCharSupported ? &letters[codepointIndex] : &notFoundPixels;
-    u32 color = isCharSupported ? FOREGROUND_COLOR : FOREGROUND_COLOR_ERROR;
-
-    int maxX = 0;
-
-    for (int i = 0; i < pixels->pointCount; i += 1)
-    {
-        int x = pixels->points[i].x;
-        int y = pixels->points[i].y;
-        DrawRect(bitmap, posX + x * PIXEL_SIZE, posY + y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, color);
-
-        if (x > maxX)
-            maxX = x;
-    }
-
-    return maxX + 1;
-}
-
-void DrawPixelGrid(MyBitmap *bitmap)
-{
-    int widthInCells = bitmap->width / PIXEL_SIZE + 1;
-    int heightInCells = bitmap->height / PIXEL_SIZE + 1;
-    for (int y = 0; y < heightInCells; y += 1)
-    {
-        for (int x = 0; x < widthInCells; x += 1)
-        {
-            u32 color = (x + y) % 2 == 0 ? 0x222222 : 0x444444;
-            DrawRect(bitmap, x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE, color);
-        }
-    }
-}
-
-float totalTime = 0;
-int highlightAt = 3;
-
-void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
-{
-#if SHOW_GRID
-    DrawPixelGrid(bitmap);
-#endif
-
-    if (input->leftPressedThisFrame && highlightAt > 0)
-        highlightAt--;
-    if (input->rightPressedThisFrame && highlightAt < txtFile.size - 1)
-        highlightAt++;
-
-
-    int step = PIXEL_SIZE * CELL_SIZE;
-    int pagePadding = 20;
-    int maxTextWidth = bitmap->width - pagePadding * 2;
-
-    u32 softLineBreaks[200] = {-1};
-    u32 currentSoftLine = 0;
-
-    u32 currentSoftlineWidth = 0;
-    i32 currentWord = 0;
-    i32 currentWordWidth = 0;
-
-
-    //extract this on one time events
-    for (int i = 0; i < txtFile.size; i += 1)
-    {
-        i8 ch = *((i8 *)txtFile.content + i);
-        if (ch == ' ')
-        {
-            if (currentSoftlineWidth >= maxTextWidth)
-            {
-                softLineBreaks[currentSoftLine] = currentWord;
-                // I don't know why I need - 1 here. Visually new lines may go one logical pixel over the board
-                currentSoftlineWidth = currentWordWidth + (SPACE_WIDTH - 1) * PIXEL_SIZE;
-                currentSoftLine++;
-                currentWord = i;
-                currentWordWidth = 0;
-            }
-            else
-            {
-                currentWord = i;
-                currentWordWidth = 0;
-                currentSoftlineWidth += SPACE_WIDTH * PIXEL_SIZE;
-            }
-        }
-        else if (ch == '\n' || i == txtFile.size - 1)
-        {
-            if (currentSoftlineWidth >= maxTextWidth)
-            {
-                softLineBreaks[currentSoftLine] = currentWord;
-                currentSoftlineWidth = currentSoftlineWidth;
-            }
-            else
-            {
-                softLineBreaks[currentSoftLine] = i;
-                currentSoftlineWidth = 0;
-            }
-
-            currentSoftLine++;
-            
-            currentWord = i;
-            currentWordWidth = 0;
-        }
-        else
-        {
-            i32 gWidth = (GetGlyphWidth(ch) + 1) * PIXEL_SIZE;
-            currentWordWidth += gWidth;
-            currentSoftlineWidth += gWidth;
-        }
-    }
-
-    u32 currentDrawingLine = 0;
-
-    int x = pagePadding;
-    int y = pagePadding;
-    int lineAdvance = 3;
-    int paragraphAdvance = 8;
-
-    int logicalPixelsBetweenLetters = 1;
-
-    for(int i = 0; i < txtFile.size; i += 1)
-    {
-        if (i == highlightAt)
-        {
-            int width = logicalPixelsBetweenLetters * PIXEL_SIZE;
-            DrawRect(bitmap, x - width, y, width, CELL_SIZE * PIXEL_SIZE, CURSOR_COLOR);
-        }
-
-        u8 ch = *((u8 *)txtFile.content + i);
-        if (i == softLineBreaks[currentDrawingLine])
-        {
             if (ch == '\n')
             {
-                y += (CELL_SIZE + paragraphAdvance) * PIXEL_SIZE;
+                lines[++currentLine] = i;
+                runningWidth = 0;
+                wordFirstLetterIndex = i + 1;
+                wordLength = 0;
+            }
+        }
+        else if (ch == '\n')
+        {
+            lines[++currentLine] = i;
+            runningWidth = 0;
+            wordFirstLetterIndex = i + 1;
+            wordLength = 0;
+        }
+        else if (ch != '\r')
+        {
+            int w = GetGlyphWidth(ch);
+            if (ch == ' ')
+            {
+                wordFirstLetterIndex = i + 1;
+                wordLength = 0;
             }
             else
             {
-                y += (CELL_SIZE + lineAdvance) * PIXEL_SIZE;
+                wordLength += w;
             }
-            currentDrawingLine += 1;
-            x = pagePadding;
+            runningWidth += w;
         }
-        else if (ch == ' ')
+
+        letter += 1;
+    }
+}
+float totalTime = 0;
+void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
+{
+    i8 *fileContent = (i8*)file.content;
+    if (input->leftPressedThisFrame && position > 0)
+    {
+        if (fileContent[position - 1] == '\r')
+            position -= 2;
+        else
+            position -= 1;
+    }
+    if (input->rightPressedThisFrame && position < file.size)
+    {
+        if (fileContent[position + 1] == '\r')
+            position += 2;
+        else
+            position += 1;
+    }
+
+    if (input->downPressedThisFrame)
+    {
+        u32 currentLine = GetCurrentPositionLineIndex();
+        if (lines[currentLine + 1] == 0)
+            position = file.size;
+        else
         {
-            x += SPACE_WIDTH * PIXEL_SIZE;
+            u32 carretLineOffset = position - lines[currentLine];
+            u32 nextPos = lines[currentLine + 1] + carretLineOffset;
+            position = nextPos > file.size ? file.size : nextPos;
         }
-        else if (ch == '\r')
+    }
+    if (input->upPressedThisFrame)
+    {
+
+        u32 currentLine = GetCurrentPositionLineIndex();
+        if (currentLine == 0)
         {
-            // skip windows carrage returns
+            position = 0;
         }
         else
         {
-            x += (DrawPixelGlyphAt(bitmap, ch, x, y) + logicalPixelsBetweenLetters) * PIXEL_SIZE;
+            u32 nextPos = position - (lines[currentLine] - lines[currentLine - 1]);
+            position = nextPos < 0 ? 0 : nextPos;
         }
     }
+
+    int x = SCREEN_PADDING;
+    int y = SCREEN_PADDING;
+
+    // first line index
+    int currentLineEndIndex = 1;
+    int lineHeight = GetFontHeight();
+    int paragraphHeight = lineHeight * 1.4;
+
+    char *ch = fileContent;
+    for(int i = 0; i < file.size; i += 1)
+    {
+
+        if (position == i)
+        {
+            DrawRect(bitmap, x-1, y, 2, lineHeight, 0xdddddd);
+        }
+
+        if (lines[currentLineEndIndex] == i)
+        {
+            y += *ch == '\n' ? paragraphHeight : lineHeight;
+            x = SCREEN_PADDING;
+            currentLineEndIndex += 1;
+        }
+        else if (*ch != '\r')
+        {
+            char codepoint = *ch;
+            MyBitmap *glyphBitmap = GetGlyphBitmap(codepoint);
+            DrawTextureTopLeft(bitmap, glyphBitmap, (V2){x, y}, 0xeeeeee);
+
+            x += glyphBitmap->width;
+        }
+        ch++;
+    }
+
+    if (position == file.size)
+    {
+        DrawRect(bitmap, x-1, y, 2, lineHeight, 0xeeeeee);
+    }
+
 
     totalTime += deltaMs;
 }
+

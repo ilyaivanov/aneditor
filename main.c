@@ -1,6 +1,6 @@
 #include <windows.h>
 #include "font\gdiFont.c"
-#include "editor2.c"
+#include "editor.c"
 
 // #define LOG_TIME 1
 

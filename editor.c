@@ -10,7 +10,7 @@
 #define SCREEN_PADDING 20
 #define MAX_LINES 256
 
-int lines[MAX_LINES] = {[0] = -1};
+int lines[MAX_LINES];
 int position = 0;
 
 inline u32 GetCurrentPositionLineIndex()
@@ -30,28 +30,20 @@ inline u32 GetCurrentPositionLineIndex()
     return currentLineIndex;
 }
 
-
-FileContent file;
-void GameInit(MyBitmap *bitmap, MyFrameInput *input)
+void SplitTextIntoLines(FileContent textFile, u32 maxWidth)
 {
-    file = input->readFile("..\\sample.txt");
-    // file = input->readFile("..\\small.txt");
-    MyAssert(file.size > 0);
-    InitFontSystem(12); // 12 corresponds for Segoe UI to browser 16px on my machine. Need to investigate why (probably hardcoded 72 DPI in the code at gdiFont.c)
+    memset(&lines, 0, sizeof lines);
 
-    int totalWidth = bitmap->width;
-
+    lines[0] = -1;
 
     int currentLine = 0;
-    int maxWidth = bitmap->width - SCREEN_PADDING * 2;
     int runningWidth = 0;
     int wordFirstLetterIndex = 0;
     int wordLength = 0;
 
-    char *letter = (u8 *)file.content;
+    char *letter = (u8 *)textFile.content;
 
-    //767
-    for (int i = 0; i < file.size; i += 1)
+    for (int i = 0; i < textFile.size; i += 1)
     {
         i8 ch = *letter;
         
@@ -72,6 +64,13 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
         }
         else if (ch == '\n')
         {
+            if (runningWidth >= maxWidth)
+            {
+                lines[++currentLine] = wordFirstLetterIndex - 1;
+                runningWidth = wordLength;
+                wordFirstLetterIndex = i + 1;
+                wordLength = 0;
+            }
             lines[++currentLine] = i;
             runningWidth = 0;
             wordFirstLetterIndex = i + 1;
@@ -95,9 +94,38 @@ void GameInit(MyBitmap *bitmap, MyFrameInput *input)
         letter += 1;
     }
 }
+
+FileContent file;
+
+// used to track screen width change
+u32 screenWidth = 0;
+void GameInit(MyBitmap *bitmap, MyFrameInput *input)
+{
+    screenWidth = bitmap->width;
+    file = input->readFile("..\\sample.txt");
+    // file = input->readFile("..\\small.txt");
+    MyAssert(file.size > 0);
+    InitFontSystem(12); // 12 corresponds for Segoe UI to browser 16px on my machine. Need to investigate why (probably hardcoded 72 DPI in the code at gdiFont.c)
+
+    int totalWidth = bitmap->width;
+
+    SplitTextIntoLines(file, bitmap->width - SCREEN_PADDING * 2);
+}
+
+
+
+
+
 float totalTime = 0;
+
 void GameUpdateAndRender(MyBitmap *bitmap, MyFrameInput *input, float deltaMs)
 {
+    if(screenWidth != bitmap->width)
+    {
+        SplitTextIntoLines(file, bitmap->width - SCREEN_PADDING * 2);
+        screenWidth = bitmap->width;
+    }
+
     i8 *fileContent = (i8*)file.content;
     if (input->leftPressedThisFrame && position > 0)
     {
